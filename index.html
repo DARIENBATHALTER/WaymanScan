@@ -869,12 +869,27 @@
                                 return;
                             }
                             
-                            this.headers = results.meta.fields;
-                            AppState.inventory = results.data;
+                            // Normalize column headers by trimming whitespace
+                            const normalizedFields = results.meta.fields.map(field => field.trim());
+                            this.headers = normalizedFields;
+                            
+                            // Log the column headers for debugging
+                            console.log("CSV Headers after normalization:", normalizedFields);
+                            
+                            // Use the normalized headers for mapping data
+                            AppState.inventory = results.data.map(row => {
+                                const normalizedRow = {};
+                                // Create a new object with trimmed keys
+                                Object.keys(row).forEach(key => {
+                                    const trimmedKey = key.trim();
+                                    normalizedRow[trimmedKey] = row[key];
+                                });
+                                return normalizedRow;
+                            });
                             
                             // Save to storage
                             StorageService.saveAppState();
-                            resolve(results.data);
+                            resolve(AppState.inventory);
                         },
                         error: (error) => reject(error)
                     });
@@ -882,6 +897,9 @@
             },
             
             exportCSV: function() {
+                console.log("Exporting CSV with headers:", this.headers);
+                console.log("Sample row from inventory:", AppState.inventory[0]);
+                
                 const csv = Papa.unparse({
                     fields: this.headers,
                     data: AppState.inventory
@@ -918,14 +936,31 @@
                 
                 // Format the tag based on type
                 let formattedTag = this.formatTagForSearch(tag, tagType);
-                console.log(`Searching for ${tagType} tag: "${formattedTag}"`);
+                console.log(`Searching for ${tagType} tag: "${formattedTag}" in column "${tagColumn}"`);
+                
+                // Debug: Log all inventory items with their tag values to check what we're comparing against
+                console.log("Inventory items in this column:", AppState.inventory.map(item => {
+                    return {
+                        type: item['Device Type'],
+                        tagValue: item[tagColumn],
+                        tagType: typeof item[tagColumn]
+                    };
+                }).filter(i => i.tagValue)); // Only show items that have a value in this column
                 
                 // First try an exact match
-                let exactMatch = AppState.inventory.find(item => 
-                    item[tagColumn] && 
-                    (item[tagColumn].toString() === formattedTag || 
-                     item[tagColumn].toString() === tag)
-                );
+                let exactMatch = AppState.inventory.find(item => {
+                    if (!item[tagColumn]) return false;
+                    
+                    // Convert both to strings for comparison to avoid type mismatches
+                    const itemTagStr = item[tagColumn].toString().trim();
+                    const searchTagStr = formattedTag.toString().trim();
+                    
+                    const isMatch = itemTagStr === searchTagStr;
+                    if (isMatch) {
+                        console.log(`Found exact match: CSV value "${itemTagStr}" === search value "${searchTagStr}"`);
+                    }
+                    return isMatch;
+                });
                 
                 if (exactMatch) {
                     console.log(`Found exact match for ${tagType} tag: ${formattedTag}`);
@@ -947,16 +982,47 @@
                 const matchedItem = AppState.inventory.find(item => {
                     if (!item[tagColumn]) return false;
                     
-                    const itemTag = item[tagColumn].toString();
+                    // Convert to string and trim any whitespace
+                    const itemTag = item[tagColumn].toString().trim();
                     
                     if (tagType === 'iPad') {
                         // For iPad, match the last 4 digits
                         const itemLastDigits = this.getLastDigits(itemTag, 4);
                         return itemLastDigits === searchTag;
                     } else if (tagType === 'WAA') {
-                        // For WAA, remove leading zeros from both
+                        // For WAA, remove leading zeros from both for comparison
                         const normalizedItemTag = itemTag.replace(/^0+/, '') || "0";
-                        return normalizedItemTag === searchTag;
+                        const normalizedSearchTag = searchTag.replace(/^0+/, '') || "0";
+                        
+                        // Debug logging
+                        console.log(`Comparing WAA tags - Normalized item tag: "${normalizedItemTag}", Normalized search tag: "${normalizedSearchTag}"`);
+                        
+                        // Check for exact match after normalization
+                        if (normalizedItemTag === normalizedSearchTag) {
+                            console.log(`Found match after normalization: "${normalizedItemTag}" === "${normalizedSearchTag}"`);
+                            return true;
+                        }
+                        
+                        // Special case for 3-digit WAA tags (common format)
+                        // If the normalized search tag is longer than 3 digits, also try matching just the last 3
+                        if (normalizedSearchTag.length > 3) {
+                            const last3Digits = normalizedSearchTag.slice(-3);
+                            console.log(`Also trying last 3 digits: "${last3Digits}"`);
+                            if (normalizedItemTag === last3Digits) {
+                                console.log(`Found match with last 3 digits: "${normalizedItemTag}" === "${last3Digits}"`);
+                                return true;
+                            }
+                        }
+                        
+                        // Try comparing as numbers to avoid string comparison issues
+                        const numericItemTag = parseInt(normalizedItemTag, 10);
+                        const numericSearchTag = parseInt(normalizedSearchTag, 10);
+                        if (!isNaN(numericItemTag) && !isNaN(numericSearchTag) && numericItemTag === numericSearchTag) {
+                            console.log(`Found match comparing as numbers: ${numericItemTag} === ${numericSearchTag}`);
+                            return true;
+                        }
+                        
+                        return false;
                     } else {
                         // For others, compare after removing leading zeros
                         const normalizedItemTag = itemTag.replace(/^0+/, '') || "0";
@@ -973,25 +1039,60 @@
                 return matchedItem;
             },
             
-            formatTagForSearch: function(tag, tagType) {
-                // Remove any non-alphanumeric characters except for iPad-specific format
-                let cleanTag = tag.toString().replace(/[^\w\-]/g, '');
-                
-                if (tagType === 'iPad') {
-                    // If it looks like a complex iPad serial, extract last 4 digits
-                    if (cleanTag.includes('-') || cleanTag.length > 8) {
-                        cleanTag = this.getLastDigits(cleanTag, 4);
-                    }
-                }
-                
-                return cleanTag;
-            },
-            
             getLastDigits: function(str, count) {
                 // Extract only digits
                 const digitsOnly = str.toString().replace(/\D/g, '');
+                console.log(`Extracting last ${count} digits from: "${str}" -> digits only: "${digitsOnly}"`);
+                
                 // Get last 'count' digits
-                return digitsOnly.slice(-count);
+                const lastDigits = digitsOnly.slice(-count);
+                console.log(`Last ${count} digits extracted: "${lastDigits}"`);
+                
+                return lastDigits;
+            },
+            
+            formatTagForSearch: function(tag, tagType) {
+                // Convert to string and trim whitespace
+                const tagStr = tag.toString().trim();
+                console.log(`Formatting ${tagType} tag: Original "${tagStr}"`);
+                
+                // Remove any non-alphanumeric characters except for iPad-specific format
+                let cleanTag = tagStr.replace(/[^\w\-]/g, '');
+                
+                if (tagType === 'iPad') {
+                    // For iPad tags, first log the original for debugging
+                    console.log(`Formatting iPad tag: "${tagStr}"`);
+                    
+                    // If it looks like a complex iPad serial, extract last 4 digits
+                    if (tagStr.includes('-') || tagStr.length > 8) {
+                        // Extract only digits first
+                        const allDigits = tagStr.replace(/\D/g, '');
+                        console.log(`iPad tag digits only: "${allDigits}"`);
+                        
+                        // Then get last 4 digits
+                        cleanTag = allDigits.slice(-4);
+                        console.log(`Extracted last 4 digits for iPad: "${cleanTag}"`);
+                    } else if (cleanTag.length > 4) {
+                        // If it's not a complex serial but still longer than 4 digits,
+                        // still take the last 4 as iPad tags are 4 digits in the inventory
+                        cleanTag = cleanTag.slice(-4);
+                        console.log(`Using last 4 digits from simpler iPad tag: "${cleanTag}"`);
+                    }
+                } else if (tagType === 'WAA') {
+                    // For WAA tags, if the input is already a clean number, keep it exactly as is
+                    // This helps with exact matches like "100"
+                    if (/^\d+$/.test(tagStr)) {
+                        cleanTag = tagStr; // Preserve exact format for direct number input
+                        console.log(`Preserving exact WAA tag format: "${cleanTag}"`);
+                    } else {
+                        // Otherwise remove non-numeric characters
+                        cleanTag = tagStr.replace(/\D/g, '');
+                        console.log(`Cleaned WAA tag by removing non-digits: "${cleanTag}"`);
+                    }
+                }
+                
+                console.log(`Final formatted ${tagType} tag: "${cleanTag}"`);
+                return cleanTag;
             },
             
             findEmptyChromebookRow: function() {
@@ -1154,6 +1255,58 @@
                 StorageService.saveAppState();
                 
                 return newRow;
+            },
+            
+            // Add a direct lookup function for exact tag matching
+            directTagLookup: function(tag, tagType) {
+                console.log(`Performing direct lookup for ${tagType} tag: "${tag}"`);
+                
+                // Determine which column to check based on tag type
+                const tagColumn = this.getTagColumn(tagType);
+                console.log(`Looking in column: "${tagColumn}"`);
+                
+                // Log all items in inventory with this tag column for debugging
+                const itemsWithThisTag = AppState.inventory
+                    .filter(item => item[tagColumn] && item[tagColumn].toString().trim() === tag.trim())
+                    .map(item => ({
+                        type: item['Device Type'],
+                        model: item['Make / Model'],
+                        tag: item[tagColumn]
+                    }));
+                    
+                console.log(`Found ${itemsWithThisTag.length} potential matches:`, itemsWithThisTag);
+                
+                // Find exact match (directly comparing trimmed strings)
+                const match = AppState.inventory.find(item => {
+                    if (!item[tagColumn]) return false;
+                    
+                    const itemTagValue = item[tagColumn].toString().trim();
+                    const searchTagValue = tag.trim();
+                    
+                    const isMatch = itemTagValue === searchTagValue;
+                    
+                    if (isMatch) {
+                        console.log(`Found exact match: Item tag "${itemTagValue}" === search tag "${searchTagValue}"`);
+                    }
+                    
+                    return isMatch;
+                });
+                
+                return match;
+            },
+            
+            // Helper to get the correct tag column name
+            getTagColumn: function(tagType) {
+                switch (tagType) {
+                    case 'WAA':
+                        return 'WAA Tag';
+                    case 'iPad':
+                        return 'iPad Tag';
+                    case 'Chromebook':
+                        return 'Chromebook Tag';
+                    default:
+                        return 'WAA Tag';
+                }
             }
         };
 
@@ -1523,13 +1676,42 @@
                                         // Extract all numbers
                                         const numbers = text.match(/\d+/g);
                                         if (numbers && numbers.length > 0) {
-                                            // First, check for iPad-specific format (e.g., 2013-061-0000161599)
-                                            const fullText = text.replace(/\s+/g, '');
-                                            if (AppState.selectedTagType === 'iPad' && 
-                                                (fullText.includes('-') || fullText.length > 8)) {
-                                                // Extract the last 4 digits
-                                                const last4 = CSVManager.getLastDigits(fullText, 4);
-                                                if (last4) {
+                                            // Special handling for iPad-specific format (e.g., 2013-061-0000161599)
+                                            if (AppState.selectedTagType === 'iPad') {
+                                                console.log("Processing iPad OCR result:", text);
+                                                
+                                                // Check for the iPad's long serial number format
+                                                // Look for patterns that match the Apple serial format
+                                                const fullText = text.replace(/\s+/g, '');
+                                                
+                                                // If the text includes dashes or seems like a long serial
+                                                if (fullText.includes('-') || fullText.length > 10) {
+                                                    // Extract only the digits from the entire text
+                                                    const allDigits = fullText.replace(/\D/g, '');
+                                                    console.log("iPad serial digits only:", allDigits);
+                                                    
+                                                    // Get the last 4 digits
+                                                    const last4 = allDigits.slice(-4);
+                                                    console.log("iPad serial last 4 digits:", last4);
+                                                    
+                                                    if (last4 && last4.length === 4) {
+                                                        return resolve({ method: 'ocr', tag: last4 });
+                                                    }
+                                                }
+                                                
+                                                // As a fallback, look for 4-digit segments in the detected numbers
+                                                for (const num of numbers) {
+                                                    if (num.length === 4) {
+                                                        console.log("Found 4-digit number in iPad OCR:", num);
+                                                        return resolve({ method: 'ocr', tag: num });
+                                                    }
+                                                }
+                                                
+                                                // If no 4-digit number found, use the longest number's last 4 digits
+                                                let longestNum = numbers.reduce((a, b) => a.length > b.length ? a : b, "");
+                                                if (longestNum) {
+                                                    const last4 = longestNum.slice(-4).padStart(4, '0');
+                                                    console.log("Using longest number's last 4 digits for iPad:", last4);
                                                     return resolve({ method: 'ocr', tag: last4 });
                                                 }
                                             }
@@ -1540,7 +1722,18 @@
                                             for (const num of numbers) {
                                                 // For normal processing, find the longest number with 1-4 significant digits
                                                 const withoutLeadingZeros = num.replace(/^0+/, '');
-                                                if (withoutLeadingZeros.length >= 1 && withoutLeadingZeros.length <= 4) {
+                                                
+                                                // Special handling for WAA tags
+                                                if (AppState.selectedTagType === 'WAA') {
+                                                    // For WAA tags, accept numbers of any length
+                                                    // but prefer ones with 3 digits (common format)
+                                                    if (!bestMatch || 
+                                                        (withoutLeadingZeros.length === 3) || 
+                                                        (withoutLeadingZeros.length > bestMatch.replace(/^0+/, '').length)) {
+                                                        bestMatch = num;
+                                                    }
+                                                } else if (withoutLeadingZeros.length >= 1 && withoutLeadingZeros.length <= 4) {
+                                                    // For other tags, use the standard approach
                                                     if (!bestMatch || num.length > bestMatch.length) {
                                                         bestMatch = num;
                                                     }
@@ -1642,14 +1835,42 @@
                                     let formattedCode = code;
                                     
                                     if (AppState.selectedTagType === 'iPad') {
-                                        // For iPad, get the last 4 digits
-                                        formattedCode = CSVManager.getLastDigits(code, 4);
-                                        console.log("Formatted iPad tag:", formattedCode);
+                                        // For iPad, we need to handle complex serial formats
+                                        console.log("Processing iPad barcode:", code);
+                                        
+                                        // Extract only digits
+                                        const allDigits = code.replace(/\D/g, '');
+                                        console.log("iPad barcode digits only:", allDigits);
+                                        
+                                        // Get the last 4 digits
+                                        formattedCode = allDigits.slice(-4);
+                                        console.log("Formatted iPad tag (last 4 digits):", formattedCode);
+                                        
+                                        // Ensure we have exactly 4 digits
+                                        if (formattedCode.length !== 4) {
+                                            console.log("iPad barcode did not produce a 4-digit code:", formattedCode);
+                                            if (formattedCode.length > 4) {
+                                                formattedCode = formattedCode.slice(-4);
+                                            } else {
+                                                formattedCode = formattedCode.padStart(4, '0');
+                                            }
+                                            console.log("Adjusted iPad tag:", formattedCode);
+                                        }
                                     } else {
                                         // For other types, process the code normally
                                         // Remove leading zeros and check if remaining digits are 1-4
                                         const withoutLeadingZeros = code.replace(/^0+/, '');
-                                        if (withoutLeadingZeros.length < 1 || withoutLeadingZeros.length > 4) {
+                                        if (AppState.selectedTagType === 'WAA') {
+                                            // For WAA, accept digits of any length
+                                            console.log("Processing WAA barcode:", code, "->", withoutLeadingZeros);
+                                            // But if it's very long, use the last 3 digits (common WAA format)
+                                            if (withoutLeadingZeros.length > 5) {
+                                                formattedCode = withoutLeadingZeros.slice(-3);
+                                                console.log("Using last 3 digits for WAA:", formattedCode);
+                                            } else {
+                                                formattedCode = code; // Keep original format for WAA
+                                            }
+                                        } else if (withoutLeadingZeros.length < 1 || withoutLeadingZeros.length > 4) {
                                             console.log("Barcode does not match required format:", code);
                                             resolve(null);
                                             return;
@@ -1738,6 +1959,27 @@
                         UIController.showStatus("Tag number cannot be empty", "error");
                         AppState.processingTag = false;
                         return;
+                    }
+                    
+                    console.log(`Confirming tag: "${editedTag}" with tag type: "${AppState.selectedTagType}"`);
+                    
+                    // Try direct matching first (best for manual entry and edited tags)
+                    const directMatch = CSVManager.directTagLookup(editedTag, AppState.selectedTagType);
+                    
+                    if (directMatch) {
+                        console.log("Direct match found:", directMatch);
+                        
+                        // Get any condition notes if device is marked as broken
+                        let notes = '';
+                        if (AppState.deviceCondition === 'broken') {
+                            notes = AppState.conditionNotes;
+                        }
+                        
+                        // Complete the check-in
+                        this.completeCheckIn(directMatch, false, notes);
+                        return;
+                    } else {
+                        console.log("No direct match found, falling back to standard matching");
                     }
                     
                     // Find matching item with the edited tag
@@ -2115,8 +2357,21 @@
                 Elements.submitManualTag.addEventListener('click', () => {
                     const tag = Elements.manualTagInput.value.trim();
                     if (tag) {
+                        console.log("Manual tag entry:", tag);
                         Elements.manualEntryModal.style.display = 'none';
-                        ScannerInterface.processScannedTag(tag);
+                        
+                        // For manual entry, first try direct lookup (simpler and more reliable)
+                        const directMatch = CSVManager.directTagLookup(tag, AppState.selectedTagType);
+                        
+                        if (directMatch) {
+                            console.log("Direct match found for manual entry:", directMatch);
+                            // Show the confirmation dialog with the matched item
+                            ScannerInterface.showSuccessConfirmation(tag, directMatch);
+                        } else {
+                            // If no direct match found, proceed with normal processing
+                            console.log("No direct match found for manual entry, trying normal processing");
+                            ScannerInterface.processScannedTag(tag);
+                        }
                     }
                 });
                 
