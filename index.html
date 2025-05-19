@@ -1,0 +1,2293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WAA Inventory Scanner</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.4;
+            color: #333;
+            padding: 10px;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        
+        /* Form elements */
+        .input-group {
+            margin-bottom: 0.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.2rem;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        input[type="text"],
+        input[type="file"],
+        select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        /* Compact controls */
+        .compact-controls {
+            margin-bottom: 0.5rem;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            padding: 0.5rem;
+            border: 1px solid #eee;
+        }
+        
+        .compact-controls-title {
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-bottom: 0.3rem;
+            color: #555;
+        }
+        
+        /* Radio groups */
+        .radio-group {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .radio-option {
+            flex: 1;
+            text-align: center;
+            font-size: 0.8rem;
+            background-color: #f0f0f0;
+            padding: 0.3rem 0.1rem;
+            border-radius: 4px;
+            margin: 0 2px;
+        }
+        
+        .radio-option:first-child {
+            margin-left: 0;
+        }
+        
+        .radio-option:last-child {
+            margin-right: 0;
+        }
+        
+        .radio-option input[type="radio"] {
+            margin-right: 3px;
+            vertical-align: middle;
+        }
+        
+        .radio-option label {
+            display: inline;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+        
+        /* Checkbox styling */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-top: 0.3rem;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        
+        .checkbox-group label {
+            display: inline;
+            font-size: 0.8rem;
+            font-weight: normal;
+            margin-bottom: 0;
+        }
+        
+        /* Scan mode selection */
+        .scan-mode-selection {
+            margin-top: 5px;
+            padding: 5px 8px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        
+        .scan-mode-title {
+            font-weight: bold;
+            margin-bottom: 2px;
+            font-size: 0.8rem;
+        }
+        
+        .scan-mode-options {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .scan-mode-option {
+            flex: 1;
+            text-align: center;
+            padding: 3px;
+            font-size: 0.8rem;
+        }
+        
+        .scan-mode-option input[type="radio"] {
+            margin-right: 3px;
+            vertical-align: middle;
+        }
+        
+        .scan-mode-option label {
+            display: inline;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 0.6rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #0066cc;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+        }
+        
+        .btn:active {
+            background-color: #005bb5;
+        }
+        
+        .btn.secondary {
+            background-color: #666;
+        }
+        
+        .btn.secondary:active {
+            background-color: #555;
+        }
+        
+        /* Scanner */
+        #scanner-container {
+            width: 100%;
+            height: 50vh;
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            display: none;
+        }
+        
+        #scanner-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background-color: #000;
+        }
+        
+        /* iOS-specific fixes */
+        #scanner-video::-webkit-media-controls {
+            display: none !important;
+        }
+        
+        /* Add a loading indicator */
+        .camera-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        /* Capture button styling */
+        .capture-button {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.7);
+            border: 3px solid white;
+            cursor: pointer;
+            z-index: 15;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .capture-button::after {
+            content: '';
+            display: block;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background-color: white;
+        }
+        
+        .capture-button:active::after {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .tap-instruction {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px;
+            font-weight: bold;
+            z-index: 10;
+        }
+        
+        /* Status and results */
+        #status-container {
+            margin-top: 0.5rem;
+            padding: 0.6rem;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+            display: none;
+            font-size: 1rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .success {
+            background-color: #e6ffe6;
+            border-left: 4px solid #00cc00;
+        }
+        
+        .error {
+            background-color: #ffe6e6;
+            border-left: 4px solid #cc0000;
+        }
+        
+        .info {
+            background-color: #e6f2ff;
+            border-left: 4px solid #0066cc;
+        }
+        
+        /* Sections */
+        .setup-section, .scanner-section, .results-section {
+            margin-bottom: 0.8rem;
+        }
+        
+        /* Device list summary */
+        #device-summary {
+            padding: 0.6rem;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        /* Compact button group */
+        .button-row {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .button-row .btn {
+            margin-bottom: 0;
+            flex: 1;
+        }
+        
+        /* View devices modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            margin: 20px;
+            padding: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .close {
+            float: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* Utility classes */
+        .hidden {
+            display: none;
+        }
+        
+        /* Scanner overlay */
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+        
+        .scan-target {
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(76, 175, 80, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3);
+        }
+        
+        .scan-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .scan-result {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Success confirmation overlay */
+        .scan-success-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .scan-success-content {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            width: 80%;
+            max-width: 400px;
+        }
+        
+        .scan-success-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #009900;
+        }
+        
+        .scanned-tag {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        input.scanned-tag {
+            border: 2px solid #0066cc;
+            font-size: 2rem;
+        }
+        
+        input.scanned-tag:focus {
+            outline: none;
+            border-color: #0099ff;
+            box-shadow: 0 0 8px rgba(0, 153, 255, 0.6);
+        }
+        
+        .scan-success-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .btn-undo {
+            background-color: #ff6666;
+        }
+        
+        .btn-confirm {
+            background-color: #66cc66;
+        }
+        
+        /* Two-column layout for tag type and scan mode */
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .controls-column {
+            flex: 1;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        
+        /* Vertical radio groups */
+        .vertical-radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        
+        .vertical-radio-option {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        
+        .vertical-radio-option input[type="radio"] {
+            margin-right: 8px;
+        }
+        
+        .vertical-radio-option label {
+            display: inline;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <h1>WAA Inventory Scanner</h1>
+    
+    <div class="setup-section">
+        <div class="input-group">
+            <label for="csv-upload">Upload Inventory CSV</label>
+            <input type="file" id="csv-upload" accept=".csv">
+        </div>
+        
+        <div id="setup-details" class="hidden">
+            <div class="compact-controls">
+                <div class="input-group">
+                    <label for="teacher-location">Teacher/Location</label>
+                    <input type="text" id="teacher-location" placeholder="Enter teacher name or classroom">
+                </div>
+                
+                <div class="controls-row">
+                    <div class="controls-column">
+                        <div class="compact-controls-title">Device Tag Type:</div>
+                        <div class="vertical-radio-group">
+                            <div class="vertical-radio-option">
+                                <input type="radio" id="waa-tag" name="tag-type" value="WAA" checked>
+                                <label for="waa-tag">WAA</label>
+                            </div>
+                            <div class="vertical-radio-option">
+                                <input type="radio" id="ipad-tag" name="tag-type" value="iPad">
+                                <label for="ipad-tag">iPad</label>
+                            </div>
+                            <div class="vertical-radio-option">
+                                <input type="radio" id="chromebook-tag" name="tag-type" value="Chromebook">
+                                <label for="chromebook-tag">Chromebook</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="controls-column">
+                        <div class="scan-mode-title">Scan Mode:</div>
+                        <div class="vertical-radio-group">
+                            <div class="vertical-radio-option">
+                                <input type="radio" id="scan-mode-both" name="scan-mode" value="both" checked>
+                                <label for="scan-mode-both">Both</label>
+                            </div>
+                            <div class="vertical-radio-option">
+                                <input type="radio" id="scan-mode-ocr" name="scan-mode" value="ocr">
+                                <label for="scan-mode-ocr">OCR</label>
+                            </div>
+                            <div class="vertical-radio-option">
+                                <input type="radio" id="scan-mode-barcode" name="scan-mode" value="barcode">
+                                <label for="scan-mode-barcode">Barcode</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group condition-group">
+                    <label for="device-condition">Device Condition:</label>
+                    <select id="device-condition">
+                        <option value="functional">Functional</option>
+                        <option value="broken">Broken</option>
+                    </select>
+                </div>
+                
+                <div class="input-group condition-notes-group" style="display: none;">
+                    <label for="condition-notes-input">Issue Description:</label>
+                    <input type="text" id="condition-notes-input" placeholder="Describe the issue (screen cracked, etc.)">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="scanner-section hidden" id="scanner-section">
+        <div class="button-row">
+            <button id="start-scan-btn" class="btn">Start Scanning</button>
+            <button id="manual-entry-btn" class="btn secondary">Manual Entry</button>
+        </div>
+        
+        <div id="scanner-container">
+            <video id="scanner-video" playsinline autoplay muted></video>
+            <div class="scan-overlay">
+                <div class="scan-target"></div>
+            </div>
+            <div class="scan-flash" id="scan-flash"></div>
+            <div class="scan-result" id="scan-result"></div>
+            <div class="camera-loading" id="camera-loading">Accessing camera...</div>
+            <div class="capture-button"></div>
+            <div class="tap-instruction">Tap to capture</div>
+        </div>
+    </div>
+    
+    <div class="results-section hidden" id="results-section">
+        <div id="status-container"></div>
+        
+        <div id="device-summary"></div>
+        
+        <div class="button-row">
+            <button id="view-devices-btn" class="btn secondary">View Devices</button>
+            <button id="export-btn" class="btn">Export CSV</button>
+        </div>
+    </div>
+    
+    <!-- Manual Entry Modal -->
+    <div id="manual-entry-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-manual-entry">&times;</span>
+            <h2>Enter Tag Manually</h2>
+            <div class="input-group">
+                <input type="text" id="manual-tag-input" placeholder="Enter tag number" pattern="[0-9]*" inputmode="numeric">
+            </div>
+            <button id="submit-manual-tag" class="btn">Submit</button>
+        </div>
+    </div>
+    
+    <!-- View Devices Modal -->
+    <div id="view-devices-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-view-devices">&times;</span>
+            <h2>All Devices</h2>
+            <div id="devices-list-container"></div>
+        </div>
+    </div>
+
+    <!-- Success Confirmation Overlay -->
+    <div id="scan-success-overlay" class="scan-success-overlay">
+        <div class="scan-success-content">
+            <div class="scan-success-title">Tag Scanned</div>
+            <p>Scanned Tag Number (edit if needed):</p>
+            <input type="text" id="scanned-tag-input" class="scanned-tag" value="1234">
+            <div id="device-details"></div>
+            <div class="scan-success-buttons">
+                <button id="btn-undo" class="btn btn-undo">Cancel</button>
+                <button id="btn-confirm" class="btn btn-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Device Modal -->
+    <div id="add-device-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-add-device">&times;</span>
+            <h2>Add New Device</h2>
+            <p>No matching device found. Add a new device with this tag?</p>
+            <div class="input-group">
+                <label for="new-device-tag">Tag Number:</label>
+                <input type="text" id="new-device-tag" readonly>
+            </div>
+            <div class="input-group">
+                <label for="new-device-type">Device Type:</label>
+                <select id="new-device-type">
+                    <option value="Chromebook">Chromebook</option>
+                    <option value="iPad">iPad</option>
+                    <option value="Windows Laptop">Windows Laptop</option>
+                    <option value="Document Camera">Document Camera</option>
+                    <option value="Printer">Printer</option>
+                    <option value="Projector">Projector</option>
+                    <option value="Speakers">Speakers</option>
+                    <option value="Media Cart">Media Cart</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="new-device-model">Make / Model:</label>
+                <input type="text" id="new-device-model" placeholder="e.g., Lenovo Chromebook 14e">
+            </div>
+            <button id="submit-new-device" class="btn">Add Device</button>
+        </div>
+    </div>
+
+    <!-- CSV Upload Warning Modal -->
+    <div id="csv-warning-modal" class="modal">
+        <div class="modal-content">
+            <h2>Warning: Replace Inventory Data</h2>
+            <p>Uploading a new CSV will clear all recorded entries for this session. Make sure to EXPORT and SAVE your current session before continuing.</p>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="export-and-continue" class="btn">Export and Continue</button>
+                <button id="continue-without-export" class="btn secondary">Continue WITHOUT Export</button>
+                <button id="cancel-upload" class="btn" style="background-color: #999;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PapaParse CSV library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+    <!-- Adding Quagga back for barcode scanning -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
+    <!-- Tesseract.js for OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+    <script>
+        // Application State
+        const AppState = {
+            inventory: [], // Parsed CSV data
+            currentTeacher: '',
+            selectedTagType: 'WAA',
+            enableConditionNotes: false,
+            deviceCondition: 'functional', // 'functional' or 'broken'
+            conditionNotes: '', // Description when broken
+            scannedTag: null,
+            processingTag: false,
+            pendingCsvFile: null, // For CSV upload warning flow
+            // Scanner config
+            scannerActive: false,
+            directCameraStream: null,
+            ocrWorker: null,
+            lastProcessedTime: 0,
+            scanInterval: null,
+            // Last check-in for undo
+            lastCheckedInItem: null,
+            // Barcode detection
+            quaggaInitialized: false,
+            detectedBarcodes: [],
+            // Scan target dimensions
+            scanTargetRect: null,
+            // Scan mode
+            scanMode: 'both' // 'both', 'ocr', or 'barcode'
+        };
+        
+        // DOM Elements
+        const Elements = {
+            csvUpload: document.getElementById('csv-upload'),
+            setupDetails: document.getElementById('setup-details'),
+            teacherLocation: document.getElementById('teacher-location'),
+            tagTypeRadios: document.querySelectorAll('input[name="tag-type"]'),
+            scanModeRadios: document.querySelectorAll('input[name="scan-mode"]'),
+            
+            // Device condition elements
+            deviceCondition: document.getElementById('device-condition'),
+            conditionNotesGroup: document.querySelector('.condition-notes-group'),
+            conditionNotesInput: document.getElementById('condition-notes-input'),
+            
+            scannerSection: document.getElementById('scanner-section'),
+            startScanBtn: document.getElementById('start-scan-btn'),
+            manualEntryBtn: document.getElementById('manual-entry-btn'),
+            scannerContainer: document.getElementById('scanner-container'),
+            scannerVideo: document.getElementById('scanner-video'),
+            scanFlash: document.getElementById('scan-flash'),
+            scanResult: document.getElementById('scan-result'),
+            cameraLoading: document.getElementById('camera-loading'),
+            captureButton: document.querySelector('.capture-button'),
+            tapInstruction: document.querySelector('.tap-instruction'),
+            
+            resultsSection: document.getElementById('results-section'),
+            statusContainer: document.getElementById('status-container'),
+            deviceSummary: document.getElementById('device-summary'),
+            viewDevicesBtn: document.getElementById('view-devices-btn'),
+            exportBtn: document.getElementById('export-btn'),
+            
+            // Modals
+            manualEntryModal: document.getElementById('manual-entry-modal'),
+            manualTagInput: document.getElementById('manual-tag-input'),
+            submitManualTag: document.getElementById('submit-manual-tag'),
+            closeManualEntry: document.getElementById('close-manual-entry'),
+            
+            viewDevicesModal: document.getElementById('view-devices-modal'),
+            devicesListContainer: document.getElementById('devices-list-container'),
+            closeViewDevices: document.getElementById('close-view-devices'),
+            
+            // Success confirmation overlay
+            scanSuccessOverlay: document.getElementById('scan-success-overlay'),
+            scannedTagInput: document.getElementById('scanned-tag-input'),
+            deviceDetails: document.getElementById('device-details'),
+            btnUndo: document.getElementById('btn-undo'),
+            btnConfirm: document.getElementById('btn-confirm'),
+            
+            // Add New Device Modal
+            addDeviceModal: document.getElementById('add-device-modal'),
+            closeAddDevice: document.getElementById('close-add-device'),
+            newDeviceTag: document.getElementById('new-device-tag'),
+            newDeviceType: document.getElementById('new-device-type'),
+            newDeviceModel: document.getElementById('new-device-model'),
+            submitNewDevice: document.getElementById('submit-new-device'),
+            
+            // CSV Upload Warning Modal
+            csvWarningModal: document.getElementById('csv-warning-modal'),
+            exportAndContinue: document.getElementById('export-and-continue'),
+            continueWithoutExport: document.getElementById('continue-without-export'),
+            cancelUpload: document.getElementById('cancel-upload')
+        };
+
+        // ====== Storage Service ======
+        const StorageService = {
+            storageKey: 'waaInventoryData',
+            
+            saveInventory: function(data) {
+                try {
+                    const serialized = JSON.stringify(data);
+                    localStorage.setItem(this.storageKey, serialized);
+                    return true;
+                } catch (error) {
+                    console.error('Error saving to localStorage:', error);
+                    return false;
+                }
+            },
+            
+            loadInventory: function() {
+                try {
+                    const serialized = localStorage.getItem(this.storageKey);
+                    return serialized ? JSON.parse(serialized) : null;
+                } catch (error) {
+                    console.error('Error loading from localStorage:', error);
+                    return null;
+                }
+            },
+            
+            clearInventory: function() {
+                localStorage.removeItem(this.storageKey);
+            },
+            
+            saveAppState: function() {
+                this.saveInventory({
+                    inventory: AppState.inventory,
+                    currentTeacher: AppState.currentTeacher,
+                    selectedTagType: AppState.selectedTagType,
+                    enableConditionNotes: AppState.enableConditionNotes,
+                    deviceCondition: AppState.deviceCondition,
+                    conditionNotes: AppState.conditionNotes,
+                    scanMode: AppState.scanMode
+                });
+            },
+            
+            loadAppState: function() {
+                const data = this.loadInventory();
+                if (data) {
+                    AppState.inventory = data.inventory;
+                    AppState.currentTeacher = data.currentTeacher || '';
+                    AppState.selectedTagType = data.selectedTagType || 'WAA';
+                    AppState.enableConditionNotes = data.enableConditionNotes || false;
+                    AppState.deviceCondition = data.deviceCondition || 'functional';
+                    AppState.conditionNotes = data.conditionNotes || '';
+                    AppState.scanMode = data.scanMode || 'both';
+                    return true;
+                }
+                return false;
+            }
+        };
+
+        // ====== CSV Manager ======
+        const CSVManager = {
+            headers: [],
+            
+            parseCSV: function(file) {
+                return new Promise((resolve, reject) => {
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            if (results.errors.length) {
+                                reject(results.errors);
+                                return;
+                            }
+                            
+                            this.headers = results.meta.fields;
+                            AppState.inventory = results.data;
+                            
+                            // Save to storage
+                            StorageService.saveAppState();
+                            resolve(results.data);
+                        },
+                        error: (error) => reject(error)
+                    });
+                });
+            },
+            
+            exportCSV: function() {
+                const csv = Papa.unparse({
+                    fields: this.headers,
+                    data: AppState.inventory
+                });
+                
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `WAA_Inventory_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+                link.style.visibility = 'hidden';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+            
+            findItemByTag: function(tag) {
+                const tagType = AppState.selectedTagType;
+                let tagColumn;
+                
+                switch (tagType) {
+                    case 'WAA':
+                        tagColumn = 'WAA Tag';
+                        break;
+                    case 'iPad':
+                        tagColumn = 'iPad Tag';
+                        break;
+                    case 'Chromebook':
+                        tagColumn = 'Chromebook Tag';
+                        break;
+                }
+                
+                // Format the tag based on type
+                let formattedTag = this.formatTagForSearch(tag, tagType);
+                console.log(`Searching for ${tagType} tag: "${formattedTag}"`);
+                
+                // First try an exact match
+                let exactMatch = AppState.inventory.find(item => 
+                    item[tagColumn] && 
+                    (item[tagColumn].toString() === formattedTag || 
+                     item[tagColumn].toString() === tag)
+                );
+                
+                if (exactMatch) {
+                    console.log(`Found exact match for ${tagType} tag: ${formattedTag}`);
+                    return exactMatch;
+                }
+                
+                // For iPad tags, get the last 4 digits for searching
+                let searchTag = formattedTag;
+                if (tagType === 'iPad') {
+                    searchTag = this.getLastDigits(formattedTag, 4);
+                    console.log(`Searching for iPad with last 4 digits: ${searchTag}`);
+                } else if (tagType === 'WAA') {
+                    // For WAA, make sure we search without any leading zeros
+                    searchTag = formattedTag.replace(/^0+/, '') || "0";
+                    console.log(`Searching for WAA tag with significant digits: ${searchTag}`);
+                }
+                
+                // Try matching by trailing digits or significant digits
+                const matchedItem = AppState.inventory.find(item => {
+                    if (!item[tagColumn]) return false;
+                    
+                    const itemTag = item[tagColumn].toString();
+                    
+                    if (tagType === 'iPad') {
+                        // For iPad, match the last 4 digits
+                        const itemLastDigits = this.getLastDigits(itemTag, 4);
+                        return itemLastDigits === searchTag;
+                    } else if (tagType === 'WAA') {
+                        // For WAA, remove leading zeros from both
+                        const normalizedItemTag = itemTag.replace(/^0+/, '') || "0";
+                        return normalizedItemTag === searchTag;
+                    } else {
+                        // For others, compare after removing leading zeros
+                        const normalizedItemTag = itemTag.replace(/^0+/, '') || "0";
+                        return normalizedItemTag === searchTag;
+                    }
+                });
+                
+                if (matchedItem) {
+                    console.log(`Found match for ${tagType} tag after processing: ${matchedItem[tagColumn]}`);
+                } else {
+                    console.log(`No match found for ${tagType} tag: ${formattedTag}`);
+                }
+                
+                return matchedItem;
+            },
+            
+            formatTagForSearch: function(tag, tagType) {
+                // Remove any non-alphanumeric characters except for iPad-specific format
+                let cleanTag = tag.toString().replace(/[^\w\-]/g, '');
+                
+                if (tagType === 'iPad') {
+                    // If it looks like a complex iPad serial, extract last 4 digits
+                    if (cleanTag.includes('-') || cleanTag.length > 8) {
+                        cleanTag = this.getLastDigits(cleanTag, 4);
+                    }
+                }
+                
+                return cleanTag;
+            },
+            
+            getLastDigits: function(str, count) {
+                // Extract only digits
+                const digitsOnly = str.toString().replace(/\D/g, '');
+                // Get last 'count' digits
+                return digitsOnly.slice(-count);
+            },
+            
+            findEmptyChromebookRow: function() {
+                return AppState.inventory.find(item => 
+                    item['Device Type'] === 'Chromebook' && 
+                    (!item['Chromebook Tag'] || item['Chromebook Tag'] === 'n/a')
+                );
+            },
+            
+            assignTagToItem: function(item, tag) {
+                const tagType = AppState.selectedTagType;
+                let tagColumn;
+                
+                switch (tagType) {
+                    case 'WAA':
+                        tagColumn = 'WAA Tag';
+                        break;
+                    case 'iPad':
+                        tagColumn = 'iPad Tag';
+                        break;
+                    case 'Chromebook':
+                        tagColumn = 'Chromebook Tag';
+                        break;
+                }
+                
+                item[tagColumn] = tag;
+                return item;
+            },
+            
+            markAsCheckedIn: function(item, notes) {
+                // Store previous state for potential undo
+                AppState.lastCheckedInItem = {
+                    item: { ...item }, // Clone the item
+                    wasCheckedIn: !!item['Checked in? (Date and time)'],
+                    previousNotes: item['Notes'],
+                    previousTeacher: item['Teacher'],
+                    previousCheckedIn: item['Checked in? (Date and time)']
+                };
+                
+                // Update location/teacher
+                if (AppState.currentTeacher) {
+                    item['Teacher'] = AppState.currentTeacher;
+                }
+                
+                // Add timestamp
+                const now = new Date().toLocaleString();
+                item['Checked in? (Date and time)'] = now;
+                
+                // Add notes if provided
+                if (notes) {
+                    item['Notes'] = notes;
+                }
+                
+                // Save changes
+                StorageService.saveAppState();
+                
+                return item;
+            },
+            
+            undoLastCheckIn: function() {
+                if (!AppState.lastCheckedInItem) {
+                    return false;
+                }
+                
+                const { item, wasCheckedIn, previousNotes, previousTeacher, previousCheckedIn } = AppState.lastCheckedInItem;
+                
+                // Find the actual item in the inventory
+                const inventoryItem = AppState.inventory.find(i => 
+                    i['Device Type'] === item['Device Type'] && 
+                    ((i['WAA Tag'] && i['WAA Tag'] === item['WAA Tag']) || 
+                     (i['iPad Tag'] && i['iPad Tag'] === item['iPad Tag']) ||
+                     (i['Chromebook Tag'] && i['Chromebook Tag'] === item['Chromebook Tag']))
+                );
+                
+                if (!inventoryItem) {
+                    return false;
+                }
+                
+                // Restore previous state
+                inventoryItem['Notes'] = previousNotes;
+                inventoryItem['Teacher'] = previousTeacher;
+                
+                if (wasCheckedIn) {
+                    inventoryItem['Checked in? (Date and time)'] = previousCheckedIn;
+                } else {
+                    inventoryItem['Checked in? (Date and time)'] = '';
+                }
+                
+                // Save changes
+                StorageService.saveAppState();
+                
+                // Clear last checked in item
+                AppState.lastCheckedInItem = null;
+                
+                return true;
+            },
+            
+            getDeviceSummary: function() {
+                const total = AppState.inventory.length;
+                const checkedIn = AppState.inventory.filter(item => 
+                    item['Checked in? (Date and time)']
+                ).length;
+                
+                // Device type summaries
+                const deviceTypes = {};
+                AppState.inventory.forEach(item => {
+                    const type = item['Device Type'];
+                    if (!deviceTypes[type]) {
+                        deviceTypes[type] = {
+                            total: 0,
+                            checkedIn: 0
+                        };
+                    }
+                    
+                    deviceTypes[type].total++;
+                    
+                    if (item['Checked in? (Date and time)']) {
+                        deviceTypes[type].checkedIn++;
+                    }
+                });
+                
+                return {
+                    total,
+                    checkedIn,
+                    types: deviceTypes
+                };
+            },
+            
+            addNewDevice: function(tag, deviceType, makeModel) {
+                // Create a new row based on the device type
+                const newRow = {
+                    'Device Type': deviceType,
+                    'Make / Model': makeModel,
+                    'WAA Tag': 'n/a',
+                    'iPad Tag': 'n/a',
+                    'Chromebook Tag': 'n/a',
+                    'Location': '',
+                    'Teacher': AppState.currentTeacher || '',
+                    'Checked in? (Date and time)': new Date().toLocaleString(),
+                    'Notes': 'Added manually via scanner'
+                };
+                
+                // Set the appropriate tag column
+                switch (AppState.selectedTagType) {
+                    case 'WAA':
+                        newRow['WAA Tag'] = tag;
+                        break;
+                    case 'iPad':
+                        newRow['iPad Tag'] = tag;
+                        break;
+                    case 'Chromebook':
+                        newRow['Chromebook Tag'] = tag;
+                        break;
+                }
+                
+                // Add to the inventory
+                AppState.inventory.push(newRow);
+                
+                // Save the updated inventory
+                StorageService.saveAppState();
+                
+                return newRow;
+            }
+        };
+
+        // ====== Scanner Interface ======
+        const ScannerInterface = {
+            initialize: function() {
+                return new Promise((resolve, reject) => {
+                    // First stop any existing scanner
+                    if (AppState.scannerActive) {
+                        this.stopScanning();
+                    }
+                    
+                    // Show the video container and loading indicator
+                    Elements.scannerContainer.style.display = 'block';
+                    Elements.cameraLoading.style.display = 'block';
+                    Elements.cameraLoading.textContent = "Accessing camera...";
+                    Elements.captureButton.style.display = 'none'; // Hide button until camera is ready
+                    Elements.tapInstruction.style.display = 'none'; // Hide instructions initially
+                    
+                    // Set up camera access with specific iOS-friendly constraints
+                    const constraints = {
+                        video: { 
+                            facingMode: "environment",
+                            width: { min: 640, ideal: 1080, max: 1920 },
+                            height: { min: 480, ideal: 720, max: 1080 }
+                        },
+                        audio: false
+                    };
+                    
+                    console.log("Requesting camera with constraints:", constraints);
+                    
+                    navigator.mediaDevices.getUserMedia(constraints)
+                        .then(stream => {
+                            console.log("Direct camera access successful");
+                            
+                            // Store the stream for later cleanup
+                            AppState.directCameraStream = stream;
+                            
+                            // Set up video element with the stream
+                            Elements.scannerVideo.srcObject = stream;
+                            Elements.scannerVideo.setAttribute('autoplay', 'true');
+                            Elements.scannerVideo.setAttribute('muted', 'true');
+                            Elements.scannerVideo.setAttribute('playsinline', 'true');
+                            
+                            // Force play - essential for iOS Safari
+                            const playPromise = Elements.scannerVideo.play();
+                            if (playPromise !== undefined) {
+                                playPromise
+                                    .then(() => {
+                                        console.log("Video is playing");
+                                        // Hide loading, show capture button when video is playing
+                                        Elements.cameraLoading.style.display = 'none';
+                                        Elements.captureButton.style.display = 'flex';
+                                        Elements.tapInstruction.style.display = 'block';
+                                        
+                                        // Calculate scan target rectangle dimensions
+                                        // This will be used to crop the image for OCR processing
+                                        setTimeout(() => {
+                                            this.calculateScanTargetRect();
+                                        }, 500);
+                                        
+                                        // Initialize both scanning systems
+                                        Promise.all([
+                                            this.initTesseract(),
+                                            this.initQuagga()
+                                        ]).then(() => {
+                                            console.log("Both scanning systems initialized");
+                                            resolve(true);
+                                        }).catch(err => {
+                                            console.error("Error initializing scanning systems:", err);
+                                            // Still resolve as camera is working
+                                            resolve(true);
+                                        });
+                                    })
+                                    .catch(err => {
+                                        console.error("Error playing video:", err);
+                                        Elements.cameraLoading.textContent = "Could not start video. Tap the screen.";
+                                        
+                                        // On iOS, we might need user interaction to start the video
+                                        // Attempt to add a tap-to-play handler
+                                        const tapToPlay = function() {
+                                            Elements.scannerVideo.play()
+                                                .then(() => {
+                                                    console.log("Video started after tap");
+                                                    Elements.cameraLoading.style.display = 'none';
+                                                    Elements.captureButton.style.display = 'flex';
+                                                    Elements.tapInstruction.style.display = 'block';
+                                                    Elements.scannerContainer.removeEventListener('click', tapToPlay);
+                                                })
+                                                .catch(err => console.error("Still can't play:", err));
+                                        };
+                                        
+                                        Elements.scannerContainer.addEventListener('click', tapToPlay);
+                                        
+                                        // Initialize Tesseract anyway
+                                        Promise.all([
+                                            this.initTesseract(),
+                                            this.initQuagga()
+                                        ]).then(() => {
+                                            resolve(true);
+                                        }).catch(err => {
+                                            console.error("Error initializing scanning systems:", err);
+                                            resolve(true);
+                                        });
+                                    });
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Camera access error:", err);
+                            Elements.cameraLoading.style.display = 'none';
+                            Elements.cameraLoading.textContent = "Camera access denied or not available";
+                            Elements.cameraLoading.style.display = 'block';
+                            reject(err);
+                        });
+                });
+            },
+            
+            calculateScanTargetRect: function() {
+                // Get the dimensions of the scan target (green square)
+                const scanTarget = document.querySelector('.scan-target');
+                if (!scanTarget) return;
+                
+                const targetRect = scanTarget.getBoundingClientRect();
+                const videoRect = Elements.scannerVideo.getBoundingClientRect();
+                
+                // Calculate the position relative to the video element
+                const relativeRect = {
+                    left: (targetRect.left - videoRect.left) / videoRect.width,
+                    top: (targetRect.top - videoRect.top) / videoRect.height,
+                    width: targetRect.width / videoRect.width,
+                    height: targetRect.height / videoRect.height
+                };
+                
+                // Store for later use
+                AppState.scanTargetRect = relativeRect;
+                console.log("Scan target rectangle:", AppState.scanTargetRect);
+            },
+            
+            initTesseract: function() {
+                return new Promise((resolve, reject) => {
+                    Tesseract.createWorker({
+                        logger: progress => {
+                            console.log('Tesseract progress:', progress);
+                        }
+                    }).then(worker => {
+                        AppState.ocrWorker = worker;
+                        
+                        // Configure Tesseract for best results with numbers
+                        worker.loadLanguage('eng').then(() => {
+                            worker.initialize('eng').then(() => {
+                                // Set Tesseract to only look for digits
+                                worker.setParameters({
+                                    tessedit_char_whitelist: '0123456789',
+                                    tessedit_ocr_engine_mode: 1  // Neural net LSTM engine only
+                                }).then(() => {
+                                    console.log("Tesseract.js initialized successfully");
+                                    resolve(true);
+                                });
+                            });
+                        });
+                    }).catch(err => {
+                        console.error("Tesseract initialization error:", err);
+                        reject(err);
+                    });
+                });
+            },
+            
+            initQuagga: function() {
+                return new Promise((resolve, reject) => {
+                    if (!Elements.scannerVideo) {
+                        reject(new Error("Video element not found"));
+                        return;
+                    }
+                    
+                    // First check if Quagga is available
+                    if (typeof Quagga === 'undefined') {
+                        console.warn("Quagga not available, skipping barcode initialization");
+                        resolve(false);
+                        return;
+                    }
+                    
+                    // For Quagga, we'll only set up the configuration but not start it
+                    // We'll use it only when the user taps the capture button
+                    AppState.quaggaConfig = {
+                        inputStream: {
+                            name: "Live",
+                            type: "LiveStream",
+                            target: Elements.scannerVideo,
+                            constraints: {
+                                width: { min: 640 },
+                                height: { min: 480 },
+                                aspectRatio: { min: 1, max: 2 },
+                                facingMode: "environment"
+                            }
+                        },
+                        locator: {
+                            patchSize: "medium",
+                            halfSample: true
+                        },
+                        numOfWorkers: 2,
+                        frequency: 10,
+                        decoder: {
+                            readers: [
+                                "code_128_reader",
+                                "ean_reader",
+                                "ean_8_reader",
+                                "code_39_reader",
+                                "code_93_reader",
+                                "upc_reader",
+                                "upc_e_reader",
+                                "codabar_reader"
+                            ]
+                        },
+                        locate: true
+                    };
+                    
+                    AppState.quaggaInitialized = true;
+                    resolve(true);
+                });
+            },
+            
+            startScanning: function() {
+                Elements.scannerContainer.style.display = 'block';
+                Elements.startScanBtn.textContent = 'Stop Scanning';
+                AppState.scannerActive = true;
+                
+                // Reset the detected barcodes array
+                AppState.detectedBarcodes = [];
+                
+                // Set up capture button click handler
+                Elements.captureButton.addEventListener('click', this.captureImage.bind(this));
+                
+                // Also allow clicking anywhere on the video to capture (helpful for iOS)
+                Elements.scannerVideo.addEventListener('click', this.captureImage.bind(this));
+                
+                UIController.showStatus("Camera active - tap the button to capture", "info");
+            },
+            
+            captureImage: function() {
+                if (AppState.processingTag) return; // Prevent multiple captures while processing
+                
+                try {
+                    AppState.processingTag = true;
+                    
+                    // Show capture effect
+                    this.showScanEffect('Capturing...');
+                    
+                    // Create a canvas to capture the current video frame
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Set canvas size to match video dimensions
+                    canvas.width = Elements.scannerVideo.videoWidth;
+                    canvas.height = Elements.scannerVideo.videoHeight;
+                    
+                    // Draw the current video frame to the canvas
+                    ctx.drawImage(Elements.scannerVideo, 0, 0, canvas.width, canvas.height);
+                    
+                    // Initialize the promises array for parallel processing
+                    const promises = [];
+                    
+                    // Process with OCR if enabled
+                    if ((AppState.scanMode === 'both' || AppState.scanMode === 'ocr') && AppState.ocrWorker) {
+                        promises.push(this.processWithOCR(canvas));
+                    }
+                    
+                    // Process with Quagga for barcode detection if enabled
+                    if ((AppState.scanMode === 'both' || AppState.scanMode === 'barcode') && AppState.quaggaInitialized) {
+                        promises.push(this.processWithQuagga(canvas));
+                    }
+                    
+                    // If we have no promises, show an error
+                    if (promises.length === 0) {
+                        UIController.showStatus("No scanning engines available for selected mode. Please try manual entry.", "error");
+                        AppState.processingTag = false;
+                        return;
+                    }
+                    
+                    // Wait for all promises to resolve
+                    Promise.all(promises)
+                        .then(results => {
+                            const validResults = results.filter(r => r && r.tag);
+                            
+                            if (validResults.length === 0) {
+                                UIController.showStatus(`No valid tag numbers found with ${AppState.scanMode} scanning. Try again or change scan mode.`, "error");
+                                AppState.processingTag = false;
+                                return;
+                            }
+                            
+                            // Check if we have multiple results
+                            if (validResults.length > 1) {
+                                // Check if both results are similar (indicate higher confidence)
+                                const [result1, result2] = validResults;
+                                if (this.areTagsSimilar(result1.tag, result2.tag)) {
+                                    console.log("Multiple detection methods returned similar results - high confidence");
+                                    // Use the OCR result as it might handle the leading zeros better
+                                    const ocrResult = validResults.find(r => r.method === 'ocr');
+                                    if (ocrResult) {
+                                        this.processScannedTag(ocrResult.tag);
+                                    } else {
+                                        this.processScannedTag(validResults[0].tag);
+                                    }
+                                } else {
+                                    // Results are different, prefer OCR
+                                    console.log("Detection methods returned different results - using OCR");
+                                    const ocrResult = validResults.find(r => r.method === 'ocr');
+                                    if (ocrResult) {
+                                        this.processScannedTag(ocrResult.tag);
+                                    } else {
+                                        this.processScannedTag(validResults[0].tag);
+                                    }
+                                }
+                            } else {
+                                // Only one valid result
+                                this.processScannedTag(validResults[0].tag);
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Error processing image:", err);
+                            UIController.showStatus("Error processing image. Try again.", "error");
+                            AppState.processingTag = false;
+                        });
+                } catch (err) {
+                    console.error("Error capturing image:", err);
+                    UIController.showStatus("Error capturing image. Try again.", "error");
+                    AppState.processingTag = false;
+                }
+            },
+            
+            processWithOCR: function(canvas) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        // Check if we have the scan target rect
+                        if (AppState.scanTargetRect) {
+                            // Create a new canvas for the cropped image
+                            const croppedCanvas = document.createElement('canvas');
+                            const ctx = croppedCanvas.getContext('2d');
+                            
+                            // Calculate the actual pixel dimensions from the relative rect
+                            const rect = AppState.scanTargetRect;
+                            const x = Math.floor(rect.left * canvas.width);
+                            const y = Math.floor(rect.top * canvas.height);
+                            const width = Math.floor(rect.width * canvas.width);
+                            const height = Math.floor(rect.height * canvas.height);
+                            
+                            // Set the cropped canvas dimensions
+                            croppedCanvas.width = width;
+                            croppedCanvas.height = height;
+                            
+                            // Draw only the target area
+                            ctx.drawImage(
+                                canvas, 
+                                x, y, width, height,  // Source rectangle
+                                0, 0, width, height   // Destination rectangle
+                            );
+                            
+                            // Use the cropped canvas for OCR
+                            const imageData = croppedCanvas.toDataURL('image/jpeg', 0.9);
+                            
+                            // Process with Tesseract OCR
+                            AppState.ocrWorker.recognize(imageData)
+                                .then(result => {
+                                    const text = result.data.text.trim();
+                                    console.log("OCR result:", text);
+                                    
+                                    if (text && /\d+/.test(text)) {
+                                        // Extract all numbers
+                                        const numbers = text.match(/\d+/g);
+                                        if (numbers && numbers.length > 0) {
+                                            // First, check for iPad-specific format (e.g., 2013-061-0000161599)
+                                            const fullText = text.replace(/\s+/g, '');
+                                            if (AppState.selectedTagType === 'iPad' && 
+                                                (fullText.includes('-') || fullText.length > 8)) {
+                                                // Extract the last 4 digits
+                                                const last4 = CSVManager.getLastDigits(fullText, 4);
+                                                if (last4) {
+                                                    return resolve({ method: 'ocr', tag: last4 });
+                                                }
+                                            }
+                                            
+                                            // Otherwise, process numbers normally
+                                            let bestMatch = null;
+                                            
+                                            for (const num of numbers) {
+                                                // For normal processing, find the longest number with 1-4 significant digits
+                                                const withoutLeadingZeros = num.replace(/^0+/, '');
+                                                if (withoutLeadingZeros.length >= 1 && withoutLeadingZeros.length <= 4) {
+                                                    if (!bestMatch || num.length > bestMatch.length) {
+                                                        bestMatch = num;
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if (bestMatch) {
+                                                // For iPad, make sure we're only using the last 4 digits
+                                                if (AppState.selectedTagType === 'iPad') {
+                                                    bestMatch = CSVManager.getLastDigits(bestMatch, 4);
+                                                }
+                                                return resolve({ method: 'ocr', tag: bestMatch });
+                                            }
+                                        }
+                                    }
+                                    
+                                    resolve(null);
+                                })
+                                .catch(err => {
+                                    console.error("OCR error:", err);
+                                    resolve(null);
+                                });
+                        } else {
+                            console.warn("Scan target rectangle not calculated, using full frame");
+                            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                            
+                            // Proceed with full image OCR
+                            AppState.ocrWorker.recognize(imageData)
+                                .then(result => {
+                                    const text = result.data.text.trim();
+                                    console.log("OCR result (full image):", text);
+                                    
+                                    if (text && /\d+/.test(text)) {
+                                        const numbers = text.match(/\d+/g);
+                                        if (numbers && numbers.length > 0) {
+                                            let bestMatch = null;
+                                            
+                                            for (const num of numbers) {
+                                                // Remove leading zeros and check if remaining digits are 1-4
+                                                const withoutLeadingZeros = num.replace(/^0+/, '');
+                                                if (withoutLeadingZeros.length >= 1 && withoutLeadingZeros.length <= 4) {
+                                                    if (!bestMatch || num.length > bestMatch.length) {
+                                                        bestMatch = num;
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if (bestMatch) {
+                                                return resolve({ method: 'ocr', tag: bestMatch });
+                                            }
+                                        }
+                                    }
+                                    
+                                    resolve(null);
+                                })
+                                .catch(err => {
+                                    console.error("OCR error:", err);
+                                    resolve(null);
+                                });
+                        }
+                    } catch (err) {
+                        console.error("Error in OCR processing:", err);
+                        resolve(null);
+                    }
+                });
+            },
+            
+            processWithQuagga: function(canvas) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        // Convert the canvas to a data URL that Quagga can process
+                        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                        
+                        // Create an Image object to load the data URL
+                        const img = new Image();
+                        img.onload = function() {
+                            // Now process the image with Quagga
+                            Quagga.decodeSingle({
+                                decoder: {
+                                    readers: [
+                                        "code_128_reader",
+                                        "ean_reader",
+                                        "ean_8_reader",
+                                        "code_39_reader",
+                                        "code_93_reader",
+                                        "upc_reader",
+                                        "upc_e_reader",
+                                        "codabar_reader"
+                                    ]
+                                },
+                                locate: true,
+                                src: img.src
+                            }, function(result) {
+                                if (result && result.codeResult) {
+                                    console.log("Barcode detected:", result.codeResult.code);
+                                    const code = result.codeResult.code;
+                                    
+                                    // Format the code based on tag type
+                                    let formattedCode = code;
+                                    
+                                    if (AppState.selectedTagType === 'iPad') {
+                                        // For iPad, get the last 4 digits
+                                        formattedCode = CSVManager.getLastDigits(code, 4);
+                                        console.log("Formatted iPad tag:", formattedCode);
+                                    } else {
+                                        // For other types, process the code normally
+                                        // Remove leading zeros and check if remaining digits are 1-4
+                                        const withoutLeadingZeros = code.replace(/^0+/, '');
+                                        if (withoutLeadingZeros.length < 1 || withoutLeadingZeros.length > 4) {
+                                            console.log("Barcode does not match required format:", code);
+                                            resolve(null);
+                                            return;
+                                        }
+                                    }
+                                    
+                                    resolve({ method: 'barcode', tag: formattedCode });
+                                } else {
+                                    console.log("No barcode detected");
+                                    resolve(null);
+                                }
+                            });
+                        };
+                        
+                        img.onerror = function() {
+                            console.error("Failed to load image for barcode processing");
+                            resolve(null);
+                        };
+                        
+                        img.src = imageData;
+                    } catch (err) {
+                        console.error("Error in barcode processing:", err);
+                        resolve(null);
+                    }
+                });
+            },
+            
+            areTagsSimilar: function(tag1, tag2) {
+                // If they are exactly the same, return true
+                if (tag1 === tag2) return true;
+                
+                // Remove leading zeros from both tags
+                const clean1 = tag1.replace(/^0+/, '');
+                const clean2 = tag2.replace(/^0+/, '');
+                
+                // If the clean versions are the same, they are similar
+                return clean1 === clean2;
+            },
+            
+            processScannedTag: function(tag) {
+                console.log("Processing scanned tag:", tag);
+                
+                // Always show the confirmation box first, regardless of whether a match is found
+                this.showSuccessConfirmation(tag);
+            },
+            
+            showSuccessConfirmation: function(tag, matchedItem = null, isNewAssignment = false) {
+                // Play a success beep
+                const beep = new Audio("data:audio/wav;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQRDiMcCBcH3Cc+CDv/7xA4Tvh9Rz/y8QADBwMWgQAZG/ILNAARQ4GLTcDeIIIhxGOBAuD7hOfBB3/94gcJ3w+o5/5eIAIAAAVwWgQAVQ2ORaIQwEMAJiDg95G4nQL7mQVWI6GwRcfsZAcsKkJvxgxEjzFUgfHoSQ9Qq7KNwqHwuB13MA4a1q/DmBrHgPcmjiGoh//EwC5nGPEmS4RcfkVKOhJf+WOgoxJclFz3kgn//dBA+ya1GhurNn8zb//9NNutNuhz31f////9vt///z+IdAEAAAK4LQIAKobHItEIYCGAExBwe8jcToF9zIKrEdDYIuP2MgOWFSE34wYiR5iqQPj0JIeoVdlG4VD4XA67mAcNa1fhzA1jwHuTRxDUQ//iYBczjHiTJcIuPyKlHQkv/LHQUYkuSi57yQT//uggfZNajQ3Vm//Md///uc///AYgPh/feZ/+D/X//H5/aH//3+///w+v//+//1+//+//+/+//1/+Pz//n///9//tt///+//v//+///1//+/+//+//uAEyAA==");
+                beep.play().catch(err => console.error("Error playing beep:", err));
+                
+                // Display the tag number in the editable input
+                Elements.scannedTagInput.value = tag;
+                
+                // Clear previous device details
+                Elements.deviceDetails.innerHTML = '';
+                
+                // Show device details if we have a matched item
+                if (matchedItem) {
+                    const deviceInfo = `${matchedItem['Device Type']} - ${matchedItem['Make / Model']}`;
+                    const statusText = isNewAssignment 
+                        ? `Will be assigned to: ${deviceInfo}`
+                        : `Will be checked in: ${deviceInfo}`;
+                        
+                    Elements.deviceDetails.innerHTML = `<p>${statusText}</p>`;
+                } else {
+                    Elements.deviceDetails.innerHTML = '<p>Searching for matching device...</p>';
+                }
+                
+                // Setup the buttons
+                Elements.btnUndo.onclick = () => {
+                    // Hide the overlay
+                    Elements.scanSuccessOverlay.style.display = 'none';
+                    AppState.processingTag = false;
+                    UIController.showStatus("Scan cancelled", "info");
+                };
+                
+                Elements.btnConfirm.onclick = () => {
+                    // Get the potentially edited tag value
+                    const editedTag = Elements.scannedTagInput.value.trim();
+                    
+                    // Hide the overlay
+                    Elements.scanSuccessOverlay.style.display = 'none';
+                    
+                    if (!editedTag) {
+                        UIController.showStatus("Tag number cannot be empty", "error");
+                        AppState.processingTag = false;
+                        return;
+                    }
+                    
+                    // Find matching item with the edited tag
+                    let matchedItemForTag = matchedItem;
+                    let isNewAssignmentForTag = isNewAssignment;
+                    
+                    // If we didn't have a match or the tag was edited, search again
+                    if (!matchedItemForTag || editedTag !== tag) {
+                        matchedItemForTag = CSVManager.findItemByTag(editedTag);
+                        isNewAssignmentForTag = false;
+                        
+                        // If no match found and this is a Chromebook tag, try to assign to empty row
+                        if (!matchedItemForTag && AppState.selectedTagType === 'Chromebook') {
+                            const emptyRow = CSVManager.findEmptyChromebookRow();
+                            
+                            if (emptyRow) {
+                                matchedItemForTag = CSVManager.assignTagToItem(emptyRow, editedTag);
+                                isNewAssignmentForTag = true;
+                            }
+                        }
+                    }
+                    
+                    if (matchedItemForTag) {
+                        // Get any condition notes if device is marked as broken
+                        let notes = '';
+                        if (AppState.deviceCondition === 'broken') {
+                            notes = AppState.conditionNotes;
+                        }
+                        
+                        // Complete the check-in with condition notes if applicable
+                        this.completeCheckIn(matchedItemForTag, isNewAssignmentForTag, notes);
+                    } else {
+                        // No match found - show the add new device modal
+                        this.showAddDeviceModal(editedTag);
+                    }
+                };
+                
+                // Show the overlay
+                Elements.scanSuccessOverlay.style.display = 'flex';
+            },
+            
+            showAddDeviceModal: function(tag) {
+                // Set the tag in the modal
+                Elements.newDeviceTag.value = tag;
+                
+                // Pre-select device type based on current tag type
+                switch (AppState.selectedTagType) {
+                    case 'WAA':
+                        Elements.newDeviceType.value = 'Other';
+                        break;
+                    case 'iPad':
+                        Elements.newDeviceType.value = 'iPad';
+                        break;
+                    case 'Chromebook':
+                        Elements.newDeviceType.value = 'Chromebook';
+                        break;
+                }
+                
+                // For iPads and Chromebooks, suggest common models
+                if (AppState.selectedTagType === 'iPad') {
+                    Elements.newDeviceModel.value = 'Apple iPad 8th Generation (White 32GB)';
+                } else if (AppState.selectedTagType === 'Chromebook') {
+                    Elements.newDeviceModel.value = 'Lenovo Chromebook 14e';
+                } else {
+                    Elements.newDeviceModel.value = '';
+                }
+                
+                // Set up event handlers
+                Elements.closeAddDevice.onclick = () => {
+                    Elements.addDeviceModal.style.display = 'none';
+                    AppState.processingTag = false;
+                };
+                
+                Elements.submitNewDevice.onclick = () => {
+                    const tagNumber = Elements.newDeviceTag.value.trim();
+                    const deviceType = Elements.newDeviceType.value;
+                    const makeModel = Elements.newDeviceModel.value.trim();
+                    
+                    if (!tagNumber || !deviceType || !makeModel) {
+                        UIController.showStatus("Please fill in all fields", "error");
+                        return;
+                    }
+                    
+                    // Add the new device
+                    const newDevice = CSVManager.addNewDevice(tagNumber, deviceType, makeModel);
+                    
+                    // Hide the modal
+                    Elements.addDeviceModal.style.display = 'none';
+                    
+                    // Show success message
+                    UIController.showStatus(`Added new ${deviceType}: ${makeModel}`, "success");
+                    
+                    // Complete the check-in for the new device
+                    this.completeCheckIn(newDevice, true);
+                };
+                
+                // Show the modal
+                Elements.addDeviceModal.style.display = 'block';
+            },
+            
+            completeCheckIn: function(item, isNewAssignment, notes = '') {
+                // If device is broken and there are no notes provided, use the persistent notes
+                if (AppState.deviceCondition === 'broken' && !notes) {
+                    notes = AppState.conditionNotes || 'Device marked as broken';
+                }
+                
+                // Mark the item as checked in
+                CSVManager.markAsCheckedIn(item, notes);
+                
+                // Show success message
+                const deviceInfo = `${item['Device Type']} - ${item['Make / Model']}`;
+                let statusText = isNewAssignment 
+                    ? `Assigned tag to ${deviceInfo}`
+                    : `Checked in: ${deviceInfo}`;
+                
+                // Add condition info to status message
+                if (AppState.deviceCondition === 'broken') {
+                    statusText += ' (Broken)';
+                }
+                
+                UIController.showStatus(statusText, 'success');
+                
+                // Update device summary
+                UIController.updateDeviceSummary();
+                
+                // Reset processing flag after a delay
+                setTimeout(() => {
+                    AppState.processingTag = false;
+                    
+                    // Resume scanning if still active and not manually stopped
+                    if (AppState.scannerActive) {
+                        // Restart the scan interval
+                        this.startScanning();
+                    }
+                }, 2000);
+            },
+            
+            showScanError: function(message) {
+                UIController.showStatus(message, 'error');
+                Elements.startScanBtn.textContent = 'Start Scanning';
+            },
+            
+            showScanEffect: function(message) {
+                // Flash effect
+                const flash = Elements.scanFlash;
+                flash.style.opacity = '0.3';
+                
+                // Show scanned message in the result display
+                const result = Elements.scanResult;
+                result.textContent = message;
+                result.style.opacity = '1';
+                
+                // Fade out effects after a delay
+                setTimeout(() => {
+                    flash.style.opacity = '0';
+                    // Keep the result visible longer
+                    setTimeout(() => {
+                        result.style.opacity = '0';
+                    }, 1000);
+                }, 300);
+            },
+            
+            stopScanning: function() {
+                // Remove event listeners
+                Elements.captureButton.removeEventListener('click', this.captureImage);
+                Elements.scannerVideo.removeEventListener('click', this.captureImage);
+                
+                // Stop and terminate Tesseract worker
+                if (AppState.ocrWorker) {
+                    AppState.ocrWorker.terminate()
+                        .then(() => {
+                            console.log("Tesseract worker terminated");
+                            AppState.ocrWorker = null;
+                        })
+                        .catch(err => {
+                            console.error("Error terminating Tesseract worker:", err);
+                        });
+                }
+                
+                // Stop direct camera stream
+                if (AppState.directCameraStream) {
+                    console.log("Stopping direct camera stream");
+                    try {
+                        const tracks = AppState.directCameraStream.getTracks();
+                        tracks.forEach(track => track.stop());
+                        AppState.directCameraStream = null;
+                    } catch (err) {
+                        console.error("Error stopping camera stream:", err);
+                    }
+                }
+                
+                // Reset UI and flags
+                AppState.scannerActive = false;
+                AppState.quaggaInitialized = false;
+                Elements.scannerContainer.style.display = 'none';
+                Elements.startScanBtn.textContent = 'Start Scanning';
+                Elements.scannerVideo.srcObject = null;
+                Elements.cameraLoading.style.display = 'none';
+                Elements.captureButton.style.display = 'none';
+                Elements.tapInstruction.style.display = 'none';
+            }
+        };
+
+        // ====== UI Controller ======
+        const UIController = {
+            init: function() {
+                // Check for saved inventory
+                const hasSavedData = StorageService.loadAppState();
+                
+                if (hasSavedData) {
+                    this.enterScanningMode();
+                    
+                    // Update UI based on saved state
+                    Elements.teacherLocation.value = AppState.currentTeacher;
+                    
+                    // Set the correct radio button for tag type
+                    Elements.tagTypeRadios.forEach(radio => {
+                        if (radio.value === AppState.selectedTagType) {
+                            radio.checked = true;
+                        }
+                    });
+                    
+                    // Set the correct radio button for scan mode
+                    Elements.scanModeRadios.forEach(radio => {
+                        if (radio.value === AppState.scanMode) {
+                            radio.checked = true;
+                        }
+                    });
+                    
+                    // Set device condition
+                    Elements.deviceCondition.value = AppState.deviceCondition;
+                    this.toggleConditionNotesInput();
+                    
+                    if (AppState.deviceCondition === 'broken') {
+                        Elements.conditionNotesInput.value = AppState.conditionNotes;
+                    }
+                    
+                    // Show device summary
+                    this.updateDeviceSummary();
+                }
+                
+                this.attachEventListeners();
+            },
+            
+            attachEventListeners: function() {
+                // CSV Upload
+                Elements.csvUpload.addEventListener('change', (e) => {
+                    if (e.target.files.length === 0) return;
+                    
+                    const file = e.target.files[0];
+                    
+                    // Check if there's existing inventory data
+                    if (AppState.inventory && AppState.inventory.length > 0) {
+                        // Store the selected file for later use
+                        AppState.pendingCsvFile = file;
+                        
+                        // Show warning modal
+                        Elements.csvWarningModal.style.display = 'block';
+                    } else {
+                        // No existing data, proceed with parsing
+                        this.processCsvFile(file);
+                    }
+                });
+                
+                // CSV Warning Modal Buttons
+                Elements.exportAndContinue.addEventListener('click', async () => {
+                    // Export current data
+                    CSVManager.exportCSV();
+                    
+                    // Wait a moment for the export to complete
+                    setTimeout(() => {
+                        // Then process the new file
+                        if (AppState.pendingCsvFile) {
+                            this.processCsvFile(AppState.pendingCsvFile);
+                            AppState.pendingCsvFile = null;
+                        }
+                        
+                        // Close the modal
+                        Elements.csvWarningModal.style.display = 'none';
+                    }, 500);
+                });
+                
+                Elements.continueWithoutExport.addEventListener('click', () => {
+                    // Process the new file without exporting
+                    if (AppState.pendingCsvFile) {
+                        this.processCsvFile(AppState.pendingCsvFile);
+                        AppState.pendingCsvFile = null;
+                    }
+                    
+                    // Close the modal
+                    Elements.csvWarningModal.style.display = 'none';
+                });
+                
+                Elements.cancelUpload.addEventListener('click', () => {
+                    // Clear the file input
+                    Elements.csvUpload.value = '';
+                    AppState.pendingCsvFile = null;
+                    
+                    // Close the modal
+                    Elements.csvWarningModal.style.display = 'none';
+                });
+                
+                // Add helper method for processing CSV files
+                this.processCsvFile = async function(file) {
+                    try {
+                        await CSVManager.parseCSV(file);
+                        this.showStatus('CSV uploaded successfully!', 'success');
+                        this.enterScanningMode();
+                        this.updateDeviceSummary();
+                    } catch (error) {
+                        console.error('Error parsing CSV:', error);
+                        this.showStatus('Error uploading CSV. Please check the file format.', 'error');
+                    }
+                };
+                
+                // Teacher/Location input
+                Elements.teacherLocation.addEventListener('change', (e) => {
+                    AppState.currentTeacher = e.target.value;
+                    StorageService.saveAppState();
+                });
+                
+                // Tag type selection
+                Elements.tagTypeRadios.forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        AppState.selectedTagType = e.target.value;
+                        StorageService.saveAppState();
+                    });
+                });
+                
+                // Scan mode selection
+                Elements.scanModeRadios.forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        AppState.scanMode = e.target.value;
+                        StorageService.saveAppState();
+                        UIController.showStatus(`Scan mode changed to: ${e.target.value}`, "info");
+                    });
+                });
+                
+                // Device condition dropdown
+                Elements.deviceCondition.addEventListener('change', (e) => {
+                    AppState.deviceCondition = e.target.value;
+                    this.toggleConditionNotesInput();
+                    StorageService.saveAppState();
+                });
+                
+                // Condition notes input
+                Elements.conditionNotesInput.addEventListener('input', (e) => {
+                    AppState.conditionNotes = e.target.value;
+                    StorageService.saveAppState();
+                });
+                
+                // Scanner controls
+                Elements.startScanBtn.addEventListener('click', () => {
+                    if (AppState.scannerActive) {
+                        ScannerInterface.stopScanning();
+                    } else {
+                        // iOS often needs user interaction directly before accessing camera
+                        this.showStatus("Accessing camera...", "info");
+                        
+                        ScannerInterface.initialize()
+                            .then(() => ScannerInterface.startScanning())
+                            .catch(err => {
+                                console.error('Error initializing scanner:', err);
+                                this.showStatus('Failed to access camera. Please check permissions.', 'error');
+                            });
+                    }
+                });
+                
+                // Manual entry
+                Elements.manualEntryBtn.addEventListener('click', () => {
+                    Elements.manualTagInput.value = '';
+                    Elements.manualEntryModal.style.display = 'block';
+                });
+                
+                Elements.submitManualTag.addEventListener('click', () => {
+                    const tag = Elements.manualTagInput.value.trim();
+                    if (tag) {
+                        Elements.manualEntryModal.style.display = 'none';
+                        ScannerInterface.processScannedTag(tag);
+                    }
+                });
+                
+                Elements.closeManualEntry.addEventListener('click', () => {
+                    Elements.manualEntryModal.style.display = 'none';
+                });
+                
+                // View devices
+                Elements.viewDevicesBtn.addEventListener('click', () => {
+                    this.renderDevicesList();
+                    Elements.viewDevicesModal.style.display = 'block';
+                });
+                
+                Elements.closeViewDevices.addEventListener('click', () => {
+                    Elements.viewDevicesModal.style.display = 'none';
+                });
+                
+                // Export button
+                Elements.exportBtn.addEventListener('click', () => {
+                    CSVManager.exportCSV();
+                });
+                
+                // Handle undo button in view devices modal
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('undo-check-in')) {
+                        e.preventDefault();
+                        const success = CSVManager.undoLastCheckIn();
+                        if (success) {
+                            this.showStatus("Check-in has been undone", "success");
+                            this.updateDeviceSummary();
+                            this.renderDevicesList(); // Refresh the list
+                        } else {
+                            this.showStatus("Could not undo the last check-in", "error");
+                        }
+                    }
+                });
+                
+                // Close modals when clicking outside
+                window.addEventListener('click', (e) => {
+                    if (e.target === Elements.manualEntryModal) {
+                        Elements.manualEntryModal.style.display = 'none';
+                    }
+                    if (e.target === Elements.viewDevicesModal) {
+                        Elements.viewDevicesModal.style.display = 'none';
+                    }
+                });
+            },
+            
+            enterScanningMode: function() {
+                Elements.setupDetails.classList.remove('hidden');
+                Elements.scannerSection.classList.remove('hidden');
+                Elements.resultsSection.classList.remove('hidden');
+            },
+            
+            showStatus: function(message, type = 'info') {
+                Elements.statusContainer.textContent = message;
+                Elements.statusContainer.className = type;
+                Elements.statusContainer.style.display = 'block';
+                
+                // Hide after 8 seconds (increased from 5)
+                setTimeout(() => {
+                    Elements.statusContainer.style.display = 'none';
+                }, 8000);
+            },
+            
+            updateDeviceSummary: function() {
+                const summary = CSVManager.getDeviceSummary();
+                
+                let html = `<h3>Device Summary</h3>
+                           <p>${summary.checkedIn} of ${summary.total} devices checked in (${Math.round(summary.checkedIn/summary.total*100)}%)</p>`;
+                
+                // Create type-specific summaries
+                html += '<div class="device-types">';
+                
+                for (const [type, data] of Object.entries(summary.types)) {
+                    const percent = Math.round(data.checkedIn / data.total * 100);
+                    html += `<div class="summary-item">
+                                <span>${type}:</span>
+                                <span>${data.checkedIn} / ${data.total} (${percent}%)</span>
+                             </div>`;
+                }
+                
+                html += '</div>';
+                
+                Elements.deviceSummary.innerHTML = html;
+            },
+            
+            renderDevicesList: function() {
+                const groupedByTeacher = {};
+                
+                // Group by teacher/location
+                AppState.inventory.forEach(item => {
+                    const teacher = item['Teacher'] || 'Unassigned';
+                    
+                    if (!groupedByTeacher[teacher]) {
+                        groupedByTeacher[teacher] = [];
+                    }
+                    
+                    groupedByTeacher[teacher].push(item);
+                });
+                
+                let html = '<div class="device-list">';
+                
+                for (const [teacher, items] of Object.entries(groupedByTeacher)) {
+                    html += `<h3>${teacher}</h3>`;
+                    
+                    // Group by device type within each teacher
+                    const groupedByType = {};
+                    
+                    items.forEach(item => {
+                        const type = item['Device Type'];
+                        
+                        if (!groupedByType[type]) {
+                            groupedByType[type] = [];
+                        }
+                        
+                        groupedByType[type].push(item);
+                    });
+                    
+                    for (const [type, typeItems] of Object.entries(groupedByType)) {
+                        html += `<h4>${type} (${typeItems.length})</h4>`;
+                        
+                        html += '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">'+
+                                '<tr style="background-color: #f5f5f5;">'+
+                                '<th style="text-align: left; padding: 0.5rem;">Model</th>'+
+                                '<th style="text-align: left; padding: 0.5rem;">Tag</th>'+
+                                '<th style="text-align: left; padding: 0.5rem;">Checked In</th>'+
+                                '</tr>';
+                        
+                        typeItems.forEach(item => {
+                            const isCheckedIn = item['Checked in? (Date and time)'] ? true : false;
+                            let tagValue = '';
+                            
+                            // Determine which tag to display
+                            if (type === 'iPad') {
+                                tagValue = item['iPad Tag'];
+                            } else if (type === 'Chromebook') {
+                                tagValue = item['Chromebook Tag'];
+                            } else {
+                                tagValue = item['WAA Tag'];
+                            }
+                            
+                            html += `<tr style="border-bottom: 1px solid #ddd;">
+                                        <td style="padding: 0.5rem;">${item['Make / Model']}</td>
+                                        <td style="padding: 0.5rem;">${tagValue || 'n/a'}</td>
+                                        <td style="padding: 0.5rem;">${isCheckedIn ? '✓' : '❌'}</td>
+                                     </tr>`;
+                        });
+                        
+                        html += '</table>';
+                    }
+                }
+                
+                html += '</div>';
+                
+                Elements.devicesListContainer.innerHTML = html;
+            },
+            
+            toggleConditionNotesInput: function() {
+                if (AppState.deviceCondition === 'broken') {
+                    Elements.conditionNotesGroup.style.display = 'block';
+                } else {
+                    Elements.conditionNotesGroup.style.display = 'none';
+                }
+            }
+        };
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            UIController.init();
+        });
+    </script>
+</body>
+</html> 
